@@ -187,9 +187,20 @@ run_game(maps.get(mapname), [
     Bot(Race.Terran, MothAI()),
     Computer(Race.Random, Difficulty.Hard)
 ], realtime=False)"""
-run_game(maps.get(mapname), [
+
+#Gen 2 Workspace
+"""run_game(maps.get(mapname), [
     Bot(Race.Terran, TerranMediumAI()),
     Computer(Race.Random, Difficulty.Hard)
+], realtime=False)"""
+"""run_game(maps.get(mapname), [
+    Bot(Race.Terran, CentipedeBotAI()),
+    Computer(Race.Random, Difficulty.VeryHard)
+], realtime=False)
+"""
+run_game(maps.get(mapname), [
+    Bot(Race.Terran, CentipedeBotAI()),
+    Bot(Race.Terran, CentipedeBotAI())
 ], realtime=False)
 #Test cases used
 """

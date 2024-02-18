@@ -56,7 +56,7 @@ class MothAI(BotAI):
             """Early Game"""
             if iteration == 0:
                 await self.chat_send("ENEMY RANDOM")
-            if True:# self.time <= 240:
+            if True:
                 if iteration % 1 == 0:
                     await self.GEReaperProximity()
                     await self.GEMarineAttack()
