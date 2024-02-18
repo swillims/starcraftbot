@@ -188,8 +188,8 @@ run_game(maps.get(mapname), [
     Computer(Race.Random, Difficulty.Hard)
 ], realtime=False)"""
 run_game(maps.get(mapname), [
-    Bot(Race.Terran, MarineReaperBotEasy()),
-    Computer(Race.Random, Difficulty.Easy)
+    Bot(Race.Terran, TerranMediumAI()),
+    Computer(Race.Random, Difficulty.Hard)
 ], realtime=False)
 #Test cases used
 """

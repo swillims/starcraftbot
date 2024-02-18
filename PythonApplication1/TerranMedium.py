@@ -1,17 +1,20 @@
 import sc2
-from sc2.player import Bot, Computer
-from sc2.main import run_game
-from sc2.data import Race, Difficulty
+from sc2 import maps
 from sc2.bot_ai import BotAI
-from sc2.player import Bot, Computer, Human
-from sc2.constants import *
+from sc2.data import Difficulty, Race
+from sc2.ids.ability_id import AbilityId
+from sc2.ids.unit_typeid import UnitTypeId
+from sc2.main import run_game
+from sc2.player import Bot, Computer
+from sc2.position import Point2
+from sc2.unit import Unit
+from sc2.units import Units
 import random
 
 class TerranMediumAI(BotAI):
     async def on_step(self, iteration):
 
         """commands sorted based off of processing priority"""
-
         if iteration % 5 == 0:
             await self.reapernotdie()
 
@@ -61,377 +64,361 @@ class TerranMediumAI(BotAI):
     """army methods"""
 
     async def workerdefend(self):
-        for cc in self.units(COMMANDCENTER) | self.units(ORBITALCOMMAND):
-            enemyclose = self.known_enemy_units.closer_than(12, cc.position)
+        for cc in self.structures(UnitTypeId.COMMANDCENTER) | self.structures(UnitTypeId.ORBITALCOMMAND):
+            enemyclose = self.enemy_units.closer_than(12, cc.position)
             if enemyclose.amount > 2:
                 p = enemyclose.random.position
                 for scv in self.units.not_structure.closer_than(30, cc.position):
-                    await self.do(scv.attack(p))
+                    scv.attack(p)
                     """it's also non scv units"""
                 for lazy in self.units.not_structure.idle.closer_than(50, cc.position):
-                    await self.do(lazy.attack(p))
-                for r in self.units(REAPER) | self.units(HELLION):
-                    await self.do(r.attack(p))
-                for b in self.units(BARRACKS):
-                    await self.do(b(RALLY_BUILDING, p))
+                    lazy.attack(p)
+                for r in self.units(UnitTypeId.REAPER) | self.units(UnitTypeId.HELLION):
+                    r.attack(p)
+                for b in self.structures(UnitTypeId.BARRACKS):
+                    b(AbilityId.RALLY_BUILDING, p)
                 print("defend")
 
     async def reaperscout(self):
-        for r in self.units(REAPER).idle:
-            if len(self.known_enemy_structures) == 0:
-                m = self.state.mineral_field.closer_than((self.supply_used*2)+20, self.start_location).random.position
-                await self.do(r.attack(m))
-                print("SCOUT")
+        for r in self.units(UnitTypeId.REAPER).idle:
+            if len(self.enemy_structures) == 0:
+                m = self.mineral_field.closer_than((self.supply_used*2)+20, self.start_location).random.position
+                r.attack(m)
             else:
-                if self.units(REAPER).amount > 5:
-                    if self.units(REAPER).closer_than(6, r).amount < 5:
-                        p = self.units(REAPER).random.position
-                        await self.do(r.attack(p))
+                if self.units(UnitTypeId.REAPER).amount > 5:
+                    if self.units(UnitTypeId.REAPER).closer_than(6, r).amount < 5:
+                        p = self.units(UnitTypeId.REAPER).random.position
+                        r.attack(p)
                         print("GROUP")
-                        for r1 in self.units(REAPER).closer_than(10, r):
-                            await self.do(r1.attack(self.known_enemy_structures.random.position))
+                        for r1 in self.units(UnitTypeId.REAPER).closer_than(10, r):
+                            r1.attack(self.enemy_structures.random.position)
                             print("KILL")
                 else:
-                    m = self.state.mineral_field.closer_than((self.supply_used) + 10, self.start_location).random.position
-                    await self.do(r.attack(m))
-                    print("SCOUT")
-
+                    m = self.mineral_field.closer_than((self.supply_used) + 10, self.start_location).random.position
+                    r.attack(m)
+    
     async def reapernotdie(self):
-        for r in self.units(REAPER):
-            death = self.known_enemy_units.closer_than(4.5, r).not_structure.not_flying
+        for r in self.units(UnitTypeId.REAPER):
+            death = self.enemy_units.closer_than(4.5, r).not_structure.not_flying
             if death.exists:
                 p = r.position.towards(death.random.position, -7)
-                if await self.can_cast(r,KD8CHARGE_KD8CHARGE,death.random.position):
-                    await self.do(r(KD8CHARGE_KD8CHARGE, death.random.position))
-                    print("GRENDADE")
-                await self.do(r.move(p))
-                print("MOVE BACK")
+                if self.can_cast(r,AbilityId.KD8CHARGE_KD8CHARGE,death.random.position):
+                    r(AbilityId.KD8CHARGE_KD8CHARGE, death.random.position)
+                r.move(p)
             elif r.health_percentage < 5/7:
-                death2 = self.known_enemy_units.closer_than(8, r)
+                death2 = self.enemy_units.closer_than(8, r)
                 if death2.exists:
                     p = r.position.towards(death2.random.position, -12)
-                    await self.do(r.move(p))
-                    print("RETREAT!!!")
+                    r.move(p)
 
     async def hellionproximity(self):
-        if self.units(ARMORY).ready.exists:
-            for h in self.units(HELLION):
-                if self.known_enemy_units.closer_than(10, h.position).not_structure.not_flying.exists:
-                    await self.do(h(MORPH_HELLBAT))
-                    print("MORPH HELLBAT")
+        if self.structures(UnitTypeId.ARMORY).ready.exists:
+            for h in self.units(UnitTypeId.HELLION):
+                if self.enemy_units.closer_than(10, h.position).not_structure.not_flying.exists:
+                    h(AbilityId.MORPH_HELLBAT)
 
     async def hellbatproximity(self):
-        if self.units(ARMORY).ready.exists:
-            for h in self.units(HELLIONTANK):
-                death = self.known_enemy_units.closer_than(20, h.position).not_structure.not_flying
+        if self.structures(UnitTypeId.ARMORY).ready.exists:
+            for h in self.units(UnitTypeId.HELLIONTANK):
+                death = self.enemy_units.closer_than(20, h.position).not_structure.not_flying
                 if death.exists:
-                    await self.do(h.attack(death.random.position))
-                    print("BURN")
+                    h.attack(death.random.position)
                 else:
-                    await self.do(h(MORPH_HELLION))
-                    print("MORPH HELLBAT")
+                    h(AbilityId.MORPH_HELLION)
 
     async def siegetankproximity(self):
-        threat = self.known_enemy_units
+        threat = self.enemy_units
         if threat.exists:
-            for s in self.units(SIEGETANK):
+            for s in self.units(UnitTypeId.SIEGETANK):
                 death = threat.closer_than(12, s)
                 if death.exists:
-                    await self.do(s(SIEGEMODE_SIEGEMODE))
-                    print("SIEGE")
+                    s(AbilityId.SIEGEMODE_SIEGEMODE)
 
     async def siegedtankproximity(self):
-        threat = self.known_enemy_units
+        threat = self.enemy_units
         if threat.exists:
-            for s in self.units(SIEGETANKSIEGED):
+            for s in self.units(UnitTypeId.SIEGETANKSIEGED):
                 death = threat.closer_than(15, s)
                 if not death.exists:
-                    await self.do(s(UNSIEGE_UNSIEGE))
-                    print("UNSIEGE")
-
+                    s(AbilityId.UNSIEGE_UNSIEGE)
 
     async def militarygroup(self):
-        mr = self.units(MARAUDER)
-        for m in self.units(MARINE).idle | self.units(MARAUDER).idle:
-            if self.units(SUPPLYDEPOTLOWERED).amount > 0:
-                await self.do(m.attack(self.units.structure.random.position))
-        hel = self.units(HELLION)
+        mr = self.units(UnitTypeId.MARAUDER)
+        for m in self.units(UnitTypeId.MARINE).idle | self.units(UnitTypeId.MARAUDER).idle:
+            if self.units(UnitTypeId.SUPPLYDEPOTLOWERED).amount > 0:
+                m.attack(self.units.structure.random.position)
+        hel = self.units(UnitTypeId.HELLION)
         if hel.amount < 8:
             for h in hel.idle:
-                await self.do(h.attack(self.units.not_structure.random.position))
+                h.attack(self.units.not_structure.random.position)
         else:
-            m = self.state.mineral_field.closer_than(self.supply_used + 30, self.start_location)
+            m = self.mineral_field.closer_than(self.supply_used + 30, self.start_location)
             if m.exists:
                 for h in hel.idle:
-                    await self.do(h.attack(m.random.position))
-        for s in self.units(SIEGETANK).idle:
-            await self.do(s.attack(self.units.random.position))
+                    h.attack(m.random.position)
+        for s in self.units(UnitTypeId.SIEGETANK).idle:
+            s.attack(self.units.random.position)
 
     async def armyattack(self):
-        y = self.units(MARINE)
-        x = self.units(MARAUDER)
-        r = self.units(REAPER)
-        h = self.units(HELLION)
-        s = self.units(SIEGETANK) | self.units(HELLIONTANK)
-        if self.known_enemy_units.amount > 0 and self.known_enemy_units.closer_than(50, self.start_location).amount > 5:
-            p = self.known_enemy_units.random.position
+        y = self.units(UnitTypeId.MARINE)
+        x = self.units(UnitTypeId.MARAUDER)
+        r = self.units(UnitTypeId.REAPER)
+        h = self.units(UnitTypeId.HELLION)
+        s = self.units(UnitTypeId.SIEGETANK) | self.units(UnitTypeId.HELLIONTANK)
+        if self.enemy_units.amount > 0 and self.enemy_units.closer_than(50, self.start_location).amount > 5:
+            p = self.enemy_units.random.position
             for a in x | y | h | r | s:
-                await self.do(a.attack(p))
-        elif self.known_enemy_structures.amount > 0 and x.amount + (y.amount*1.5) + (s.amount*2) > 35 and self.units(ORBITALCOMMAND).amount < 2:
-            p = self.known_enemy_structures.random.position
+                a.attack(p)
+        elif self.enemy_structures.amount > 0 and x.amount + (y.amount*1.5) + (s.amount*2) > 35 and self.units(UnitTypeId.ORBITALCOMMAND).amount < 2:
+            p = self.enemy_structures.random.position
             for a in x | y | h | r | s:
-                await self.do(a.attack(p))
-        elif self.known_enemy_structures.amount > 0 and x.idle.amount + (y.idle.amount*1.25) + (s.idle.amount*2) > 50:
-            p = self.known_enemy_structures.random.position
+                a.attack(p)
+        elif self.enemy_structures.amount > 0 and x.idle.amount + (y.idle.amount*1.25) + (s.idle.amount*2) > 50:
+            p = self.enemy_structures.random.position
             for a in x | y | h | r | s:
-                await self.do(a.attack(p))
+                a.attack(p)
 
-    """building methods"""
+    """methods"""
 
     async def commandcenter(self):
-        for cc in self.units(COMMANDCENTER).ready.noqueue:
-            if self.units(BARRACKS).amount >= 2 and self.units(COMMANDCENTER).not_ready.amount > 0:
-                    if self.can_afford(ORBITALCOMMAND):
-                        await self.do(cc(UPGRADETOORBITAL_ORBITALCOMMAND))
-            elif self.units(SCV).amount < (self.units(COMMANDCENTER).amount * 14) + (self.units(ORBITALCOMMAND).amount * 12 ) + 8:
-                if self.can_afford(SCV) and self.units(SCV).amount < 40 and self.supply_used < 200:
-                    await self.do(cc.train(SCV))
-                elif self.units(BARRACKS).amount >= 2 and self.units(COMMANDCENTER).noqueue.amount >= 2 and not self.already_pending(ORBITALCOMMAND):
-                    if self.can_afford(ORBITALCOMMAND) and self.units(ORBITALCOMMAND).amount < 3:
-                        await self.do(cc(UPGRADETOORBITAL_ORBITALCOMMAND))
-                    elif self.can_afford(PLANETARYFORTRESS) and self.units(ENGINEERINGBAY).ready.exists:
-                        await self.do(cc(UPGRADETOPLANETARYFORTRESS_PLANETARYFORTRESS))
+        for cc in self.structures(UnitTypeId.COMMANDCENTER).idle:
+            if self.structures(UnitTypeId.BARRACKS).amount >= 2 and self.structures(UnitTypeId.COMMANDCENTER).not_ready.amount > 0:
+                    if self.can_afford(UnitTypeId.ORBITALCOMMAND):
+                        cc(AbilityId.UPGRADETOORBITAL_ORBITALCOMMAND)
+            elif self.units(UnitTypeId.SCV).amount < (self.structures(UnitTypeId.COMMANDCENTER).amount * 14) + (self.structures(UnitTypeId.ORBITALCOMMAND).amount * 12 ) + 8:
+                if self.can_afford(UnitTypeId.SCV) and self.units(UnitTypeId.SCV).amount < 40 and self.supply_used < 200:
+                    cc.train(UnitTypeId.SCV)
+                elif self.structures(UnitTypeId.BARRACKS).amount >= 2 and self.structures(UnitTypeId.COMMANDCENTER).amount >= 2 and not self.already_pending(UnitTypeId.ORBITALCOMMAND):
+                    if self.can_afford(UnitTypeId.ORBITALCOMMAND) and self.structures(UnitTypeId.ORBITALCOMMAND).amount < 3:
+                        cc(AbilityId.UPGRADETOORBITAL_ORBITALCOMMAND)
+                    elif self.can_afford(UnitTypeId.PLANETARYFORTRESS) and self.structures(UnitTypeId.ENGINEERINGBAY).ready.exists:
+                        cc(AbilityId.UPGRADETOPLANETARYFORTRESS_PLANETARYFORTRESS)
 
     async def orbitalcommand(self):
-        for cc in self.units(ORBITALCOMMAND).ready:
-            if cc.energy > 100 and not self.known_enemy_structures.amount > 0:
-                    await self.do(cc(SCANNERSWEEP_SCAN, self.enemy_start_locations[0]))
-                    await self.do(cc(SCANNERSWEEP_SCAN, self.state.mineral_field.random.position))
-                    print("scan")
+        for cc in self.structures(UnitTypeId.ORBITALCOMMAND).ready:
+            if cc.energy > 100 and not self.enemy_structures.amount > 0:
+                    cc(AbilityId.SCANNERSWEEP_SCAN, self.enemy_start_locations[0])
+                    cc(AbilityId.SCANNERSWEEP_SCAN, self.mineral_field.random.position)
 
             elif cc.energy > 50 and self.supply_left <= 0 and self.supply_used != 200:
-                if self.units(SUPPLYDEPOT).amount > 0:
-                    await self.do(cc(SUPPLYDROP_SUPPLYDROP, self.units(SUPPLYDEPOT).random))
-                    print("supplies")
-                elif self.units(SUPPLYDEPOTLOWERED).amount>0:
-                    await self.do(cc(SUPPLYDROP_SUPPLYDROP, self.units(SUPPLYDEPOTLOWERED).random))
+                if self.structures(UnitTypeId.SUPPLYDEPOT).amount > 0:
+                    cc(AbilityId.SUPPLYDROP_SUPPLYDROP, self.structures(UnitTypeId.SUPPLYDEPOT).random)
+                elif self.structures(AbilityId.SUPPLYDEPOTLOWERED).amount>0:
+                    cc(AbilityId.SUPPLYDROP_SUPPLYDROP, self.structures(AbilityId.SUPPLYDEPOTLOWERED).random)
 
-            elif cc.energy > 75 and self.known_enemy_structures.amount > 0:
-                m = self.state.mineral_field.closer_than(8, cc.position)
+            elif cc.energy > 75 and self.enemy_structures.amount > 0:
+                m = self.mineral_field.closer_than(8, cc.position)
                 if m.amount > 5:
-                    await self.do(cc(CALLDOWNMULE_CALLDOWNMULE, m.random))
-                    print("mule")
+                    cc(AbilityId.CALLDOWNMULE_CALLDOWNMULE, m.random)
 
             elif cc.energy == 200:
-                await self.do(cc(SCANNERSWEEP_SCAN, self.units.random.position))
-                await self.do(cc(SCANNERSWEEP_SCAN, self.enemy_start_locations[0]))
-                print("scan")
-                m = self.state.mineral_field.closer_than(8, cc.position)
+                cc(AbilityId.SCANNERSWEEP_SCAN, self.units.random.position)
+                cc(AbilityId.SCANNERSWEEP_SCAN, self.enemy_start_locations[0])
+                m = self.mineral_field.closer_than(8, cc.position)
                 if m.amount > 5:
-                    await self.do(cc(CALLDOWNMULE_CALLDOWNMULE, m.random))
-                    print("mule")
+                    cc(AbilityId.CALLDOWNMULE_CALLDOWNMULE, m.random)
 
-            if self.units(SCV).amount < (self.units(COMMANDCENTER).amount * 10) + self.units(ORBITALCOMMAND).amount * 6:
+            if self.units(UnitTypeId.SCV).amount < (self.structures(UnitTypeId.COMMANDCENTER).amount * 10) + self.structures(UnitTypeId.ORBITALCOMMAND).amount * 6:
                 """significantly below other methods for scv production on purpose"""
-                if self.can_afford(SCV) and self.units(SCV).amount < 40 and self.supply_used < 200:
-                    await self.do(cc.train(SCV))
+                if self.can_afford(UnitTypeId.SCV) and self.units(UnitTypeId.SCV).amount < 40 and self.supply_used < 200:
+                    cc.train(UnitTypeId.SCV)
 
                     """
-            if cc.energy == 200 and self.known_enemy_structures.amount > 0:
-                p = self.known_enemy_structures.random.position
-                await self.do(cc(SCANNERSWEEP_SCAN, p))
-                await self.do(cc(CALLDOWNMULE_CALLDOWNMULE, p.towards(self.game_info.map_center, -3)))
-                print("Manner Muling")
+            if cc.energy == 200 and self.enemy_structures.amount > 0:
+                p = self.enemy_structures.random.position
+                cc(SCANNERSWEEP_SCAN, p))
+                cc(CALLDOWNMULE_CALLDOWNMULE, p.towards(self.game_info.map_center, -3)))
                 
                 code removed for being pointless but it is funny
                 """
 
     async def barracks(self):
-        oc = self.units(ORBITALCOMMAND).ready
-        for b in self.units(BARRACKS).ready.noqueue:
+        oc = self.structures(UnitTypeId.ORBITALCOMMAND).ready
+        for b in self.structures(UnitTypeId.BARRACKS).ready.idle:
             if b.add_on_tag == 0 and self.supply_used < 200:
-                if self.can_afford(REAPER):
-                    if self.units(REAPER).amount > 0:
-                        if self.units(BARRACKSTECHLAB).amount < 2:
-                            await self.do(b.build(BARRACKSTECHLAB))
+                if self.can_afford(UnitTypeId.REAPER):
+                    if self.units(UnitTypeId.REAPER).amount > 0:
+                        if self.structures(UnitTypeId.BARRACKSTECHLAB).amount < 2:
+                            b.build(UnitTypeId.BARRACKSTECHLAB)
                             if oc.amount > 0:
                                 occ = oc.random
-                                scv = self.units(SCV).closer_than(6, occ)
+                                scv = self.units(UnitTypeId.SCV).closer_than(6, occ)
                                 if scv.amount>0:
                                     scv = scv.random
                                     p = occ.position.towards(scv.position, -8)
-                                    await self.do(b.build((BARRACKSTECHLAB),p))
+                                    b.build((UnitTypeId.BARRACKSTECHLAB),p)
                             else:
-                                await self.do(b.train(MARINE))
+                                b.train(UnitTypeId.MARINE)
                         else:
-                            await self.do(b.train(MARINE))
-                    elif self.units(REAPER).amount <= self.units(MARINE).amount / 5:
-                        await self.do(b.train(REAPER))
+                            b.train(UnitTypeId.MARINE)
+                    elif self.units(UnitTypeId.REAPER).amount <= self.units(UnitTypeId.MARINE).amount / 5:
+                        b.train(UnitTypeId.REAPER)
                     else:
-                        await self.do(b.train(MARINE))
-                elif self.can_afford(MARINE):
-                    await self.do(b.train(MARINE))
+                        b.train(UnitTypeId.MARINE)
+                elif self.can_afford(UnitTypeId.MARINE):
+                    b.train(UnitTypeId.MARINE)
             elif self.supply_used < 200:
-                if self.can_afford(MARAUDER):
-                    await self.do(b.train(MARAUDER))
-                elif self.can_afford(MARINE):
-                    await self.do(b.train(MARINE))
+                if self.can_afford(UnitTypeId.MARAUDER):
+                    b.train(UnitTypeId.MARAUDER)
+                elif self.can_afford(UnitTypeId.MARINE):
+                    b.train(UnitTypeId.MARINE)
 
     async def factory(self):
         if self.supply_used < 200:
-            for f in self.units(FACTORY).ready.idle:
-                ftl = self.units(FACTORYTECHLAB)
+            for f in self.structures(UnitTypeId.FACTORY).ready.idle:
+                ftl = self.structures(UnitTypeId.FACTORYTECHLAB)
                 if ftl.exists:
-                    id = self.units(FACTORYTECHLAB).random.tag
+                    id = self.structures(UnitTypeId.FACTORYTECHLAB).random.tag
                     if f.add_on_tag == 0:
-                        if self.can_afford(SIEGETANK):
-                            await self.do(f.build(FACTORYREACTOR))
-                            scv = self.units(SCV).random
+                        if self.can_afford(UnitTypeId.SIEGETANK):
+                            f.build(UnitTypeId.FACTORYREACTOR)
+                            scv = self.units(UnitTypeId.SCV).random
                             p = scv.position.towards(self.game_info.map_center, random.randint(4, 8))
-                            await self.do(f.build(FACTORYREACTOR, p))
-                        elif self.can_afford(HELLION):
-                            await self.do(f.train(HELLION))
+                            f.build(UnitTypeId.FACTORYREACTOR, p)
+                        elif self.can_afford(UnitTypeId.HELLION):
+                            f.train(UnitTypeId.HELLION)
                     elif f.add_on_tag == id:
-                        if self.can_afford(SIEGETANK):
-                            await self.do(f.train(SIEGETANK))
-                        elif self.can_afford(HELLION):
-                            await self.do(f.train(HELLION))
-                    elif self.can_afford(HELLION):
-                        await self.do(f.train(HELLION))
-                        if self.can_afford(HELLION):
-                            await self.do(f.train(HELLION))
-                elif self.can_afford(HELLION):
-                    if self.can_afford(SIEGETANK):
-                        await self.do(f.build(FACTORYTECHLAB))
-                        scv = self.units(SCV)
+                        if self.can_afford(UnitTypeId.SIEGETANK):
+                            f.train(UnitTypeId.SIEGETANK)
+                        elif self.can_afford(UnitTypeId.HELLION):
+                            f.train(UnitTypeId.HELLION)
+                    elif self.can_afford(UnitTypeId.HELLION):
+                        f.train(UnitTypeId.HELLION)
+                        if self.can_afford(UnitTypeId.HELLION):
+                            f.train(UnitTypeId.HELLION)
+                elif self.can_afford(UnitTypeId.HELLION):
+                    if self.can_afford(UnitTypeId.SIEGETANK):
+                        f.build(UnitTypeId.FACTORYTECHLAB)
+                        scv = self.units(UnitTypeId.SCV)
                         if scv.amount >= 20:
                             s1 = scv.random
                             s2 = scv.random
                             p = s1.position.towards(s2.position, random.randint(4, 8))
-                            await self.do(f.build(FACTORYTECHLAB, p))
+                            f.build(UnitTypeId.FACTORYTECHLAB, p)
                             p = s1.position.towards(s2.position, random.randint(4, 8))
-                            await self.do(f.build(FACTORYTECHLAB, p))
+                            f.build(UnitTypeId.FACTORYTECHLAB, p)
                             p = s1.position.towards(s2.position, random.randint(4, 8))
-                            await self.do(f.build(FACTORYTECHLAB, p))
+                            f.build(UnitTypeId.FACTORYTECHLAB, p)
                             p = s1.position.towards(s2.position, random.randint(4, 8))
-                            await self.do(f.build(FACTORYTECHLAB, p))
+                            f.build(UnitTypeId.FACTORYTECHLAB, p)
                             """random places until it works*"""
                     else:
-                        await self.do(f.train(HELLION))
+                        f.train(UnitTypeId.HELLION)
 
 
     async def supplydepotdown(self):
-        for sd in self.units(SUPPLYDEPOT).ready:
-            e = self.known_enemy_units.closer_than(6, sd.position)
+        for sd in self.structures(UnitTypeId.SUPPLYDEPOT).ready:
+            e = self.enemy_units.closer_than(6, sd.position)
             """numbers don't match on purpose as a taunt"""
             if not e.exists:
-                await self.do(sd(MORPH_SUPPLYDEPOT_LOWER))
+                sd(AbilityId.MORPH_SUPPLYDEPOT_LOWER)
 
     async def supplydepotup(self):
-        for sd in self.units(SUPPLYDEPOTLOWERED).ready:
-            e = self.known_enemy_units.closer_than(8, sd.position)
+        for sd in self.structures(UnitTypeId.SUPPLYDEPOTLOWERED).ready:
+            e = self.enemy_structures.closer_than(8, sd.position)
             """numbers don't match on purpose as a taunt"""
             if e.exists:
-                await self.do(sd(MORPH_SUPPLYDEPOT_RAISE))
+                sd(AbilityId.MORPH_SUPPLYDEPOT_RAISE)
 
     async def landstuff(self):
-        for b in self.units(BARRACKSFLYING).idle:
+        for b in self.structures(UnitTypeId.BARRACKSFLYING).idle:
             """This code is a back up code to patch a problem. It is buggy and should not be relied on"""
             print("fly b")
             p = self.start_location
-            cc = self.units(COMMANDCENTER) or self.units(ORBITALCOMMAND) or self.units(SUPPLYDEPOTLOWERED) or self.units(BARRACKS) or self.units(SUPPLYDEPOT)
+            cc = self.structures(UnitTypeId.COMMANDCENTER) or self.structures(UnitTypeId.ORBITALCOMMAND) or self.structures(UnitTypeId.SUPPLYDEPOTLOWERED) or self.structures(UnitTypeId.BARRACKS) or self.structures(UnitTypeId.SUPPLYDEPOT)
             if cc.amount > 0:
                 c = cc.random
                 p = c.position.towards(self.enemy_start_locations[0], random.randint(1, 11))
-            await self.do(b(LAND_BARRACKS, p))
-        for f in self.units(FACTORYFLYING).idle:
+            b(AbilityId.LAND, p)
+        for f in self.structures(UnitTypeId.FACTORYFLYING).idle:
             print("fly f")
             p = self.start_location
-            cc = self.units(COMMANDCENTER) or self.units(ORBITALCOMMAND) or self.units(SUPPLYDEPOTLOWERED) or self.units(BARRACKS) or self.units(SUPPLYDEPOT)
+            cc = self.structures(UnitTypeId.COMMANDCENTER) or self.structures(UnitTypeId.ORBITALCOMMAND) or self.structures(UnitTypeId.SUPPLYDEPOTLOWERED) or self.structures(UnitTypeId.BARRACKS) or self.structures(UnitTypeId.SUPPLYDEPOT)
             if cc.amount > 0:
                 c = cc.random
                 p = c.position.towards(self.enemy_start_locations[0], random.randint(1, 11))
-            await self.do(f(LAND_FACTORY, p))
+            f(AbilityId.LAND, p)
 
     async def rallyset(self, ):
         p = self.start_location.towards(self.game_info.map_center, 8)
-        s = self.units(SUPPLYDEPOT).ready
+        s = self.structures(UnitTypeId.SUPPLYDEPOT).ready
         if s.exists:
             p = s.random.position.towards(self.game_info.map_center, 1.5)
-        for b in self.units(BARRACKS) | self.units(FACTORY):
-            await self.do(b(RALLY_BUILDING, p))
+        for b in self.structures(UnitTypeId.BARRACKS) | self.structures(UnitTypeId.FACTORY):
+            b(AbilityId.RALLY_BUILDING, p)
         self.rallypos = p
 
     "build methods"
     async def buildstuff(self):
-        cc = self.units(COMMANDCENTER).ready
-        oc = self.units(ORBITALCOMMAND).ready
-        sd = (self.units(SUPPLYDEPOT).ready | self.units(SUPPLYDEPOTLOWERED).ready)
-        if self.can_afford(COMMANDCENTER):
+        cc = self.structures(UnitTypeId.COMMANDCENTER).ready
+        oc = self.structures(UnitTypeId.ORBITALCOMMAND).ready
+        sd = (self.structures(UnitTypeId.SUPPLYDEPOT).ready | self.structures(UnitTypeId.SUPPLYDEPOTLOWERED).ready)
+        if self.can_afford(UnitTypeId.COMMANDCENTER):
             if self.minerals > 300 + self.supply_used*3:
                 await self.expand_now()
-        if self.can_afford(BARRACKS):
+        if self.can_afford(UnitTypeId.BARRACKS):
             if (cc.exists or oc.exists) and sd.exists:
-                if self.units(BARRACKS).amount < 1 + cc.amount + (oc.amount*1):
-                    if self.units(BARRACKSFLYING).amount == 0:
-                        if self.units(BARRACKS).amount == 0:
+                if self.structures(UnitTypeId.BARRACKS).amount < 1 + cc.amount + (oc.amount*1):
+                    if self.structures(UnitTypeId.BARRACKSFLYING).amount == 0:
+                        if self.structures(UnitTypeId.BARRACKS).amount == 0:
                             p = self.start_location.towards(self.game_info.map_center, 5)
-                            await self.build(BARRACKS, p)
+                            await self.build(UnitTypeId.BARRACKS, p)
                         else:
                             if cc.exists:
                                 a = cc.random
-                                re = self.units(REFINERY).closer_than(10, a.position)
+                                re = self.structures(UnitTypeId.REFINERY).closer_than(10, a.position)
                                 if re.amount > 0:
                                     r = re.random
                                     p = a.position.towards(r.position, -8)
-                                    await self.build(BARRACKS, p)
+                                    await self.build(UnitTypeId.BARRACKS, p)
                                 else:
-                                    await self.build(BARRACKS, near=sd.first)
+                                    await self.build(UnitTypeId.BARRACKS, near=sd.first)
                             elif oc.exists:
                                 a = oc.random
-                                re = self.units(REFINERY).closer_than(10, a.position)
+                                re = self.structures(UnitTypeId.REFINERY).closer_than(10, a.position)
                                 if re.amount > 0:
                                     r = re.random
                                     p = a.position.towards(r.position, -8)
-                                    await self.build(BARRACKS, near=p)
+                                    await self.build(UnitTypeId.BARRACKS, near=p)
                 else:
-                    if self.can_afford(FACTORY) and oc.exists:
-                        if self.units(ENGINEERINGBAY).amount == 0 and self.units(FACTORY).amount > 0:
-                            if oc.exists and not self.already_pending(ENGINEERINGBAY):
-                                await self.build(ENGINEERINGBAY, near=sd.first)
+                    if self.can_afford(UnitTypeId.FACTORY) and oc.exists:
+                        if self.structures(UnitTypeId.ENGINEERINGBAY).amount == 0 and self.structures(UnitTypeId.FACTORY).amount > 0:
+                            if oc.exists and not self.already_pending(UnitTypeId.ENGINEERINGBAY):
+                                await self.build(UnitTypeId.ENGINEERINGBAY, near=sd.first)
                         else:
-                            if self.units(FACTORY).amount + self.units(FACTORYFLYING).amount < 2 and not self.already_pending(FACTORY):
-                                await self.build(FACTORY, near=sd.first)
+                            if self.structures(UnitTypeId.FACTORY).amount + self.structures(UnitTypeId.FACTORYFLYING).amount < 2 and not self.already_pending(UnitTypeId.FACTORY):
+                                await self.build(UnitTypeId.FACTORY, near=sd.first)
                             elif oc.exists:
-                                if self.units(ARMORY).amount < 1 and oc.amount > 0 and not self.already_pending(ARMORY):
-                                    await self.build(ARMORY, near=sd.first)
+                                if self.structures(UnitTypeId.ARMORY).amount < 1 and oc.amount > 0 and not self.already_pending(UnitTypeId.ARMORY):
+                                    await self.build(UnitTypeId.ARMORY, near=sd.first)
 
     async def managesupply(self):
-        if self.supply_left < 2 + (self.supply_used/10) and not self.already_pending(SUPPLYDEPOT):
-            cc = self.units(COMMANDCENTER).ready | self.units(ORBITALCOMMAND).ready
+        if self.supply_left < 2 + (self.supply_used/10) and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
+            cc = self.structures(UnitTypeId.COMMANDCENTER).ready | self.structures(UnitTypeId.ORBITALCOMMAND).ready
             if cc.exists:
-                if self.can_afford(SUPPLYDEPOT) and self.units(SUPPLYDEPOTLOWERED).amount < 14:
-                    if self.units(SUPPLYDEPOT).amount > 0:
-                        await self.build(SUPPLYDEPOT, near=cc.random)
+                if self.can_afford(UnitTypeId.SUPPLYDEPOT) and self.structures(UnitTypeId.SUPPLYDEPOTLOWERED).amount < 14:
+                    if self.structures(UnitTypeId.SUPPLYDEPOT).amount > 0:
+                        await self.build(UnitTypeId.SUPPLYDEPOT, near=cc.random)
                         """this has been changed because of lowering"""
                     else:
-                        if self.units(SCV).amount>0:
+                        if self.units(UnitTypeId.SCV).amount>0:
                             p = self.start_location.towards(self.game_info.map_center, 11)
-                            await self.build(SUPPLYDEPOT, p)
-        elif self.supply_left < 0 and self.can_afford(SUPPLYDEPOT):
-            await self.build(SUPPLYDEPOT, near=cc.random)
+                            await self.build(UnitTypeId.SUPPLYDEPOT, p)
+        elif self.supply_left < 0 and self.can_afford(UnitTypeId.SUPPLYDEPOT):
+            await self.build(UnitTypeId.SUPPLYDEPOT, near=cc.random)
 
     async def getgas(self):
-        if self.units(BARRACKS).amount > 0 and self.units(REFINERY).amount < self.units(COMMANDCENTER).amount + (self.units(ORBITALCOMMAND).amount):
-            for cc in self.units(COMMANDCENTER).ready:
-                v = self.state.vespene_geyser.closer_than(15.0, cc)
+        if self.structures(UnitTypeId.BARRACKS).amount > 0 and self.structures(UnitTypeId.REFINERY).amount < self.structures(UnitTypeId.COMMANDCENTER).amount + (self.structures(UnitTypeId.ORBITALCOMMAND).amount):
+            for cc in self.structures(UnitTypeId.COMMANDCENTER).ready:
+                v = self.vespene_geyser.closer_than(15.0, cc)
                 for ve in v:
-                    if self.can_afford(REFINERY) and not self.already_pending(REFINERY):
-                            if not self.units(REFINERY).closer_than(1, ve).exists:
-                                worker = self.select_build_worker(ve.position)
-                                if worker is None:
-                                    break
-                                await self.do(worker.build(REFINERY, ve))
+                    if self.can_afford(UnitTypeId.REFINERY) and not self.already_pending(UnitTypeId.REFINERY):
+                            if not self.structures(UnitTypeId.REFINERY).closer_than(1, ve).exists:
+                                #worker = self.select_self.build_worker(ve.position)
+                                #if worker is None:
+                                #    break
+                                #worker.self.build(UnitTypeId.REFINERY, ve)
+                                await self.build(UnitTypeId.REFINERY, ve)
 
 """end class"""
 

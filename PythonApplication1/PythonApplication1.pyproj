@@ -26,6 +26,7 @@
 	<Compile Include="CentipedeBot.py" />
 	<Compile Include="easy.py" />
 	<Compile Include="MothBot.py" />
+	<Compile Include="TerranMedium.py" />
 	<Compile Include="TestClassTerran.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

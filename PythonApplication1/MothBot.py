@@ -679,7 +679,7 @@ class MothAI(BotAI):
         f = building(FACTORY) | building(FACTORYFLYING)
         s = building(STARPORT) | building(STARPORTFLYING)
         e = building(ENGINEERINGBAY)
-        a = building(ARMORY)
+        a = building(UnitTypeId.ARMORY)
 
         if sd.ready.exists and cc.exists and b.amount < barrcksmin and not self.already_pending(BARRACKS) and self.can_afford(BARRACKS) and not self.needToExpand:
             print("NO BARRACKS")
@@ -717,14 +717,14 @@ class MothAI(BotAI):
                 p = scvp.towards(c, random.randint(8, 12))
                 await self.build(ENGINEERINGBAY, near=p)
 
-        if f.ready.exists and cc.exists and a.amount < armorymin and not self.already_pending(ARMORY) and self.can_afford(ARMORY) and self.supply_left > 6 and not self.needToExpand:
+        if f.ready.exists and cc.exists and a.amount < armorymin and not self.already_pending(UnitTypeId.ARMORY) and self.can_afford(UnitTypeId.ARMORY) and self.supply_left > 6 and not self.needToExpand:
             print("NO ARMORY")
             c = cc.random.position
             sc = scv.closer_than(10, c)
             if sc.exists:
                 scvp = sc.random.position
                 p = scvp.towards(c, random.randint(8, 12))
-                await self.build(ARMORY, near=p)
+                await self.build(UnitTypeId.ARMORY, near=p)
 
         if self.minerals > 200 + (cc.amount * 100) and self.can_afford(COMMANDCENTER) and not cc.flying.exists and cc.amount < ccmax and not self.already_pending(COMMANDCENTER):
             print("expand")
@@ -1184,7 +1184,7 @@ class MothAI(BotAI):
                 self.combinedActions.append(e(ENGINEERINGBAYRESEARCH_TERRANINFANTRYARMORLEVEL3))
 
     async def GMArmory(self, air: bool):
-        for a in self.units(ARMORY).ready.idle.noqueue:
+        for a in self.units(UnitTypeId.ARMORY).ready.idle.noqueue:
             if await self.can_cast(a, ARMORYRESEARCH_TERRANVEHICLEWEAPONSLEVEL1) and self.can_afford(ARMORYRESEARCH_TERRANVEHICLEWEAPONSLEVEL1):
                 self.combinedActions.append(a(ARMORYRESEARCH_TERRANVEHICLEWEAPONSLEVEL1))
             elif await self.can_cast(a, ARMORYRESEARCH_TERRANVEHICLEWEAPONSLEVEL2) and self.can_afford(ARMORYRESEARCH_TERRANVEHICLEWEAPONSLEVEL2):
@@ -1578,7 +1578,7 @@ class MothAI(BotAI):
                 ea = threat
                 if ea.exists:
                     target = ea.closest_to(m.position)
-                    priority = ea(LIBERATORAG) | ea(MEDIVAC) | ea(VIKINGFIGHTER) | ea(SIEGETANK) | ea(SIEGETANKSIEGED) | ea(LIBERATOR) | ea(WIDOWMINE) | ea(WIDOWMINEBURROWED) | ea(BANELING) | ea(LURKER) | ea(LURKERMP) | ea(CARRIER)
+                    priority = ea(UnitTypeId.LIBERATORAG) | ea(UnitTypeId.MEDIVAC) | ea(UnitTypeId.VIKINGFIGHTER) | ea(UnitTypeId.SIEGETANK) | ea(UnitTypeId.SIEGETANKSIEGED) | ea(UnitTypeId.LIBERATOR) | ea(UnitTypeId.WIDOWMINE) | ea(UnitTypeId.WIDOWMINEBURROWED) | ea(UnitTypeId.BANELING) | ea(UnitTypeId.LURKER) | ea(UnitTypeId.LURKERMP) | ea(UnitTypeId.CARRIER)
                     if priority.exists:
                         target = priority.closest_to(m.position)
                     self.combinedActions.append(m.attack(target))
