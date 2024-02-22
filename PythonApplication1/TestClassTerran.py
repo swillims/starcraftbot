@@ -161,7 +161,6 @@ elif mapnumber == 9:
 elif mapnumber == 10:
     mapname = "Neon Violet Square LE"""
 # mapname = "" # override for testing specific problem
-mapname = "Equilibrium512AIE"
 
 print("Battling:")
 print(enemy)
@@ -189,23 +188,29 @@ run_game(maps.get(mapname), [
 ], realtime=False)"""
 
 #Gen 2 Workspace
-"""run_game(maps.get(mapname), [
+# "Oceanborn512AIE" "Equilibrium512AIE" "Goldenaura512AIE"
+"""run_game(maps.get("Equilibrium512AIE"), [
     Bot(Race.Terran, TerranMediumAI()),
     Computer(Race.Random, Difficulty.Hard)
 ], realtime=False)"""
-"""run_game(maps.get(mapname), [
-    Bot(Race.Terran, CentipedeBotAI()),
-    Computer(Race.Random, Difficulty.VeryHard)
+
+"""run_game(maps.get("Equilibrium512AIE"), [
+    Bot(Race.Terran, CatipillarAI()),
+    Computer(Race.Protoss, Difficulty.Harder)
+], realtime=False)"""
+run_game(maps.get("Goldenaura512AIE"), [
+    Bot(Race.Terran, CatipillarAI()),
+    Computer(Race.Protoss, Difficulty.Harder)
 ], realtime=False)
-"""
-run_game(maps.get(mapname), [
-    Bot(Race.Terran, CentipedeBotAI()),
+"""run_game(maps.get("Equilibrium512AIE"), [
+    Bot(Race.Terran, CatipillarAI()),
     Bot(Race.Terran, CentipedeBotAI())
 ], realtime=False)
 #Test cases used
 """
 # Test case used for picking a randomized race(Terran, Zerg, Protoss, Random)
 # Possible Matchups are 1/4 Terran, 1/4 Zerg, 1/4 Protoss, 1/12 RandomTerran, 1/12 Random Zerg, 1/12 Random Protoss
+"""
 enemy = ""
 enemynumber = random.randint(1, 4)
 if enemynumber == 1:

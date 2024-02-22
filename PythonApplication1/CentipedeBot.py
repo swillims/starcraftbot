@@ -12,15 +12,10 @@ from sc2.units import Units
 import random
 
 class CentipedeBotAI(BotAI):
-
-
-    def __init__(self):
-        self.TechShield = False
-        self.TechStim = False
+    async def on_start(self):
+        # exists because the api maker decided to make it a set instead of list
+        self.cornors = list(self.main_base_ramp.corner_depots)
         self.RallyPoint = None
-        # I don't know how this works. I borrowed the concept from Sam. I believe it is a global variable
-        ## I'm redoing old bots with a different iteration of the api. I don't know if it's nessary
-        # I believe there is a better way to do it with can_cast ability then reference the upgrade_blank ability but it goes beyond the amount of time available and is less efficient.
 
     async def on_step(self, iteration):
         """Early Game"""
@@ -151,21 +146,6 @@ class CentipedeBotAI(BotAI):
             p = m.furthest_to(self.start_location).position.towards(self.start_location, 3)
             for medivac in self.units(UnitTypeId.MEDIVAC):
                 medivac.attack(p)
-        if self.units(UnitTypeId.MEDIVAC).exists and False: # "and False" added to not create unknown bugs. This is future code and is not implemented
-            sacrifice = self.units(UnitTypeId.MEDIVAC).random
-            threat = self.enemy_units.not_structure.closer_than(9, sacrifice.position).exclude_type(UnitTypeId.CHANGELING).exclude_type(UnitTypeId.CHANGELINGMARINESHIELD).exclude_type(UnitTypeId.CHANGELINGMARINE)
-            r = self.units(UnitTypeId.RAVEN).closer_than(6, sacrifice.position)
-            if threat.amount > 10 and r.amount > 1:
-                p = threat.random.position
-                print("LOADING MEDIVAC CANNON!!!")
-                if await self.can_cast(m, EFFECT_MEDIVACIGNITEAFTERBURNERS):
-                    m(EFFECT_MEDIVACIGNITEAFTERBURNERS)
-                    m.move(p)
-                    for rr in r:
-                        if rr.energy > 75:
-                            if await self.can_casr(rr, EFFECT_ANTIARMORMISSILE, sacrifice):
-                                rr(EFFECT_ANTIARMORMISSILE, sacrifice)
-
 
     async def MRavenIdle(self): # code is no long in use... It has been removed
         for r in self.units(UnitTypeId.RAVEN).idle:
@@ -265,7 +245,7 @@ class CentipedeBotAI(BotAI):
     async def EEarlyDefend(self):
 
         threat = self.enemy_units.closer_than(16, self.start_location)
-        if threat.exists:
+        if threat.amount > 1:
             army = self.units
             for a in army:
                 a.attack(threat.random)
@@ -639,33 +619,7 @@ class CentipedeBotAI(BotAI):
             if scv.exists and not sd.exists and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
                 s = scv.furthest_to(self.start_location)
                 if self.can_afford(UnitTypeId.SUPPLYDEPOT):
-
-                    if x < xd:
-                        print("x<xd")
-                        if y < yd:
-                            p = self.main_base_ramp.barracks_correct_placement.offset((0, 2)).position
-                            print("y<yd")
-                            # south east side darkness sanctuary *PASS*
-                            print("NE DOWN RAMP")
-                        else:
-                            p = self.main_base_ramp.barracks_correct_placement.offset((0, -3)).position
-                            print("y>yd")
-                            # north side 16bit
-                            # south west side darkness sanctuary *SEMI PASS VERY STRONG*
-                            print("SE DOWN RAMP")
-                    else:
-                        print("x>xd")
-                        if y < yd:
-                            p = self.main_base_ramp.barracks_correct_placement.offset((0, 2)).position
-                            print("y<yd")
-                            # south side 16bit
-                            # north east side darkness sanctuary *SEMI PASS STRONG*
-                            print("NW DOWN RAMP")
-                        else:
-                            p = self.main_base_ramp.barracks_correct_placement.offset((-3, 1)).position
-                            print("y>yd")
-                            # north west side darkness sanctuary *NO CRASH*
-                            print("SW DOWN RAMP")
+                    p = self.cornors[0]
                     s.build(UnitTypeId.SUPPLYDEPOT, p)
                     print("SUPPLY DEPOT1")
 
@@ -682,10 +636,8 @@ class CentipedeBotAI(BotAI):
                         print(yd)
                         print("BARRACKS1")
                         if self.can_afford(UnitTypeId.BARRACKS):
-                            p = self.main_base_ramp.barracks_correct_placement.offset((0, -2))
+                            p = self.main_base_ramp.barracks_correct_placement
                             s.build(UnitTypeId.BARRACKS, p)
-                            print("placement problem")
-
                 if b.exists:
                     if self.can_afford(UnitTypeId.REFINERY) and not self.structures(UnitTypeId.REFINERY).exists:
                         await self.ERefineryBuild()
@@ -698,16 +650,7 @@ class CentipedeBotAI(BotAI):
                                 c(AbilityId.UPGRADETOORBITAL_ORBITALCOMMAND)
                         elif oc.exists or self.already_pending(UnitTypeId.ORBITALCOMMAND) or self.structures(UnitTypeId.BARRACKSREACTOR).exists:
                             if sd.amount == 1 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
-                                if x < xd:
-                                    if y < yd:
-                                        p = b.first.position.offset((5, -1))
-                                    else:
-                                        p = b.first.position.offset((5, 1))
-                                else:
-                                    if y < yd:
-                                        p = b.first.position.offset((-2, 0))
-                                    else:
-                                        p = b.first.position.offset((5, -1))
+                                p = self.cornors[1]
 
                                 await self.build(UnitTypeId.SUPPLYDEPOT, p)
                             elif sd.amount <= 2:
@@ -740,17 +683,7 @@ class CentipedeBotAI(BotAI):
                                         await self.build(UnitTypeId.FACTORY, p)
                                     elif self.structures(UnitTypeId.FACTORY).exists:
                                         if self.can_afford(UnitTypeId.SUPPLYDEPOT) and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
-                                            if x < xd:
-                                                if y < yd:
-                                                    p = b.first.position.offset((7, -2))
-                                                else:
-                                                    p = b.first.position.offset((-5, 3))
-                                            else:
-                                                if y < yd:
-                                                    p = b.first.position.offset((-2, -2))
-                                                else:
-                                                    p = b.first.position.offset((5, 1))
-                                            await self.build(UnitTypeId.SUPPLYDEPOT, p)
+                                            await self.build(UnitTypeId.SUPPLYDEPOT, near=sd.random)
 
     async def MRefineryBuild(self):
         if self.structures(UnitTypeId.REFINERY).amount < (self.structures(UnitTypeId.COMMANDCENTER).amount * 2) + (self.structures(UnitTypeId.ORBITALCOMMAND).amount * 2):
@@ -788,7 +721,7 @@ class CentipedeBotAI(BotAI):
                             # logic doesn't fit code because I didn't need to change the code to accomplish what I wanted it to accomplish
 
     async def LEngineeringBay(self):
-        for e in self.structures(UnitTypeId.ENGINEERINGBAY).idle.idle:
+        for e in self.structures(UnitTypeId.ENGINEERINGBAY).idle.ready:
             if await self.can_cast(e, AbilityId.ENGINEERINGBAYRESEARCH_TERRANINFANTRYWEAPONSLEVEL1) and self.can_afford(AbilityId.ENGINEERINGBAYRESEARCH_TERRANINFANTRYWEAPONSLEVEL1):
                 e(AbilityId.ENGINEERINGBAYRESEARCH_TERRANINFANTRYWEAPONSLEVEL1)
             elif await self.can_cast(e, AbilityId.ENGINEERINGBAYRESEARCH_TERRANINFANTRYWEAPONSLEVEL2) and self.can_afford(AbilityId.ENGINEERINGBAYRESEARCH_TERRANINFANTRYWEAPONSLEVEL2):
@@ -806,11 +739,10 @@ class CentipedeBotAI(BotAI):
         bt = self.structures(UnitTypeId.BARRACKSTECHLAB).ready.idle
         if bt.exists:
             bt1 = bt.first
-            if self.can_afford(AbilityId.RESEARCH_COMBATSHIELD) and not self.TechShield:
+            if self.can_afford(AbilityId.RESEARCH_COMBATSHIELD) and await self.can_cast(bt1, AbilityId.RESEARCH_COMBATSHIELD):
                 bt1(AbilityId.RESEARCH_COMBATSHIELD)
-                self.TechShield = True
                 print("UPGRADE_SHIELD")
-            elif self.can_afford(AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK) and not self.TechStim:
+            elif self.can_afford(AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK) and await self.can_cast(bt1, AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK):
                 bt1(AbilityId.BARRACKSTECHLABRESEARCH_STIMPACK)
                 self.TechStim = True
                 print("UPGRADE_STIM")
