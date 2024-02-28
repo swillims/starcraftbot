@@ -925,21 +925,7 @@ class CatipillarAI(BotAI):
                         print("EXPAND")
                     elif oc.exists or self.already_pending(UnitTypeId.ORBITALCOMMAND) or self.structures(UnitTypeId.BARRACKSREACTOR).exists:
                         if sd.amount == 1 and self.can_afford(UnitTypeId.SUPPLYDEPOT) and not self.already_pending(UnitTypeId.SUPPLYDEPOT):
-                            if x < xd:
-                                if y < yd:
-                                    p = self.main_base_ramp.top_center.offset((-3.5, .5))
-
-                                else:
-                                    p = self.main_base_ramp.top_center.offset((-1.5, -1.5))
-
-                            else:
-                                if y < yd:
-                                    p = self.main_base_ramp.top_center.offset((-.5, -4.5))
-
-                                else:
-                                    p = self.main_base_ramp.top_center.offset((-.5, 1.5))
-
-                            await self.build(UnitTypeId.SUPPLYDEPOT, p)
+                            await self.SupplyDepot2()
                             print("SUPPLYDEPOT2")
                         elif sd.amount <= 2 and b.amount < 2:
                             if self.can_afford(UnitTypeId.BARRACKS) and not self.already_pending(UnitTypeId.BARRACKS):

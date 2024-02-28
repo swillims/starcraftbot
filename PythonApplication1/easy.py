@@ -51,7 +51,6 @@ class MarineReaperBotEasy(BotAI):
 
 
     async def buildbarracks(self):
-
         if self.structures(UnitTypeId.BARRACKS).amount + 0 < 4 + self.structures(UnitTypeId.COMMANDCENTER).amount - 1:
             cc = self.structures(UnitTypeId.COMMANDCENTER).ready
             sd = self.structures(UnitTypeId.SUPPLYDEPOT)
@@ -75,8 +74,6 @@ class MarineReaperBotEasy(BotAI):
         if self.can_afford(UnitTypeId.COMMANDCENTER):
                 if self.structures(UnitTypeId.COMMANDCENTER).amount < 3:
                     await self.expand_now()
-
-
 
     async def trainmarine(self):
         if True:

@@ -199,15 +199,14 @@ run_game(maps.get(mapname), [
     Computer(Race.Protoss, Difficulty.Harder)
 ], realtime=False)"""
 run_game(maps.get("Goldenaura512AIE"), [
-    Bot(Race.Terran, CatipillarAI()),
-    Computer(Race.Protoss, Difficulty.Harder)
+    Bot(Race.Terran, MothAI()),
+    Computer(Race.Protoss, Difficulty.VeryHard)
 ], realtime=False)
-"""run_game(maps.get("Equilibrium512AIE"), [
-    Bot(Race.Terran, CatipillarAI()),
-    Bot(Race.Terran, CentipedeBotAI())
-], realtime=False)
+"""run_game(maps.get("Oceanborn512AIE"), [
+    Bot(Race.Terran, MothAI()),
+    Bot(Race.Terran, MothAI())
+], realtime=False)"""
 #Test cases used
-"""
 # Test case used for picking a randomized race(Terran, Zerg, Protoss, Random)
 # Possible Matchups are 1/4 Terran, 1/4 Zerg, 1/4 Protoss, 1/12 RandomTerran, 1/12 Random Zerg, 1/12 Random Protoss
 """
